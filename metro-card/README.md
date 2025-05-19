@@ -1,69 +1,118 @@
-# Hello World
+**MetroCard**  
+The transport officials from the city of Pune want to design a payment system for public metro  
+transport. They have come up with the idea of a prepaid card \- MetroCard \- which is an NFC  
+enabled card that is to be tapped at entry and exit points of the metro stations.  
+To make the fares easier to understand for the commuters, the city has been divided into zones.  
+Zone 1 is the central area and Zone 2 forms a concentric ring around Zone 1\. Each metro  
+station has been assigned to a zone. In the future, more zones will be added as the metro  
+expands.  
+The problem statement is to design the fare calculation engine for MetroCard. Below are the  
+definitions and fare rules.  
+**Note:** Use of any frameworks like REST APIs, Ring (Clojure), Spring Boot, Django, databases, command line input is unnecessary and will complicate the solution. It will also extend the time taken to solve the problem. This solution will be best tested / demonstrated with Unit Tests.  
+**Rules**  
+**Time of travel**  
+The fare varies based on the time of the trip. There are two types of fares based on time of  
+travel:
 
-Welcome to Hello World on Exercism's Clojure Track.
-If you need help running the tests or submitting your code, check out `HELP.md`.
+* Peak hours timings  
+  * Monday \- Friday  
+    * 07:00 \- 10:30, 17:00 \- 20:00  
+  * Saturday \- Sunday  
+    * 09:00 \- 11:00, 18:00 \- 22:00  
+* Off-peak hours timings  
+  * All hours except the above peak hours
 
-## Instructions
+The below table shows the fare that commuters will have to pay for a single journey from station  
+A to station B. There is no concept of a round-trip journey.
 
-The classical introductory exercise.
-Just say "Hello, World!".
+| Zones | Peak hours |  Off-peak hours |
+| :---- | :---- | :---- |
+| 1 \- 1 | 30 | 25 |
+| 1 \- 2 or 2 \- 1 | 35 | 30 |
+| 2 \- 2 | 25 | 20 |
 
-["Hello, World!"][hello-world] is the traditional first program for beginning programming in a new language or environment.
+**Problem statement**  
+Given a list of journeys, the program should return the fare applicable.  
+**Input Format**: List of journeys for a single commuter, fields include day-time, from-zone, to-  
+zone  
+**Output**: Computed Fare for the input journeys data  
+**Example**
 
-The objectives are simple:
+| Input |  |  |  |  |  |
+| ----- | :---- | :---- | :---- | :---- | :---- |
+| **Day** | **Time** | **From Zone** | **To Zone** | **Calculated Fare** | **Explanation** |
+| Monday | 10:20 | 2 | 1 | 35 | Peak hours single Fare |
+| Monday | 10:45 | 1 | 1 | 25 | Off-peak single fare |
+| Monday | 16:15 | 1 | 1 | 25 | Off-peak single fare |
+| Monday | 18:15 | 1 | 1 | 30 | Peak hours single fare |
 
-- Modify the provided code so that it produces the string "Hello, World!".
-- Run the test suite and make sure that it succeeds.
-- Submit your solution and check it at the website.
+**Output:** 115  
+**Fare Capping**  
+Fare capping works by rewarding commuters with free rides after they meet the fare equivalent  
+of a daily, weekly, or monthly pass. With fare capping, social equity is achieved by removing  
+upfront cost barriers associated with the recurrent passes. For example, a single ride costs 30  
+and the daily pass costs 90, the commuter earns a daily pass after the first 3 rides. For the rest  
+of the day, all rides will be free for the commuter. Due to fare capping, the commuter does not  
+have to invest 90 on the daily pass as they get the same features using a regular card.  
+The following capping categories are available:
 
-If everything goes well, you will be ready to fetch your first real exercise.
+* Daily  
+* Weekly
 
-[hello-world]: https://en.wikipedia.org/wiki/%22Hello,_world!%22_program
+Capping Limits:
 
-## Project Structure
+| Zones | Daily Cap | Weekly Cap (Monday \- Sunday) |
+| :---- | :---- | :---- |
+| **1 \- 1** | 100 | 500 |
+| **1 \- 2 OR 2 \- 1** | 120 | 600 |
+| **2 \- 2** | 80 | 400 |
 
-Clojure exercises in exercism support the two most common tools for dependency management and testing, [leiningen](http://leiningen.org/) and the [Clojure CLI](https://clojure.org/guides/deps_and_cli).
+The cap that is applicable for a day is based on the farthest journey in a day. For example, if a  
+few journeys are within zone 1 and a single journey is between zone 1 & 2, then the daily cap  
+applicable will be the one for zone 1 \- 2\. The first example later in the document illustrates the  
+same. The weekly cap uses the same logic as the daily cap when determining the zones  
+applicable for the week.  
+The weekly cap works in conjunction with the daily cap. So, when computing the weekly cap,  
+each day fare might still be capped to that day’s daily cap. The second example later in the  
+document illustrates the same.  
+**Examples**
 
-You will find a test file named `hello_world_test.clj` inside `test` directory.
-Write your code in `src/hello_world.clj`. It should use the namespace `hello-world` so that tests can pick it up.
+1. **Daily Cap Reached**
 
-### Running tests using the Clojure CLI
+In this example, there are some trips between zone 1 and 2 in the day. So, the applicable daily  
+cap is 120\.  
+**Input:**
 
-```
-$ clj -X:test
-```
+| Input |  |  |  |  |  |
+| ----- | :---- | :---- | :---- | :---- | :---- |
+| **Day** | **Time** | **From  Zone** | **To  Zone** | **Calculated Fare** | **Explanation** |
+| Monday | 10:20 | 2 | 1 | 35 | Peak hours single Fare |
+| Monday | 10:45 | 1 | 1 | 25 | Off-peak single fare |
+| Monday | 16:15 | 1 | 1 | 25 | Off-peak single fare |
+| Monday | 18:15 | 1 | 1 | 30 | Peak hours single fare |
+| Monday | 19:00 | 1 | 2 | 5 | The Daily cap reached 120 for zone 1 \- 2\. Charged 5 instead of 35 |
 
-### Running tests using Leiningen
+**Output:** 120  
+**2\. Weekly Cap Reached**  
+**Important Note:** For easier explanation, the daily journeys have been rolled-up to just show the  
+total fare applicable for a day as this makes it easier to understand how the weekly fare capping  
+will be applicable. In the actual implementation, the input will be a list of individual journeys as  
+shown in the previous scenario.  
+In this example, there are some trips between zone 1 and 2 in the week. So, the applicable  
+weekly cap is 600\. For Monday \- Thursday, the daily cap was reached and so the fare is capped  
+at 120 for them.  
+**Input:**
 
-```
-$ lein test
+| Input |  |  |  |  |
+| ----- | :---- | :---- | :---- | :---- |
+| **Day** | **From  Zone** | **To  Zone** | **Calculated Daily Fare** | **Explanation** |
+| Monday | 1 | 2 | 120 | Daily cap reached |
+| Tuesday | 1 | 2 | 120 | Daily cap reached |
+| Wednesday | 1 | 2 | 120 | Daily cap reached |
+| Thursday | 1 | 2 | 120 | Daily cap reached |
+| Friday | 1 | 1 | 80 | Daily cap not reached |
+| Saturday | 1 | 2 | 40 | A weekly cap of 600 reached before the daily cap of 120 |
+| Sunday | 1 | 2 | 0 | A weekly cap of 600 reached |
+| Monday (Next week) | 1 | 2 | 100 | New week started |
 
-lein test hello-world-test
-
-Ran 3 tests containing 3 assertions.
-0 failures, 0 errors.
-```
-
-Then submit the exercise using:
-
-```
-$ exercism submit src/hello_world.clj
-```
-
-For more detailed instructions and learning resources refer [exercism's clojure language page](http://exercism.org/languages/clojure).
-
-## Source
-
-### Contributed to by
-
-- @AndreaCrotti
-- @christianpoveda
-- @haus
-- @jcorrado
-- @sjwarner-bp
-- @tejasbubane
-- @yurrriq
-
-### Based on
-
-This is an exercise to introduce users to using Exercism - https://en.wikipedia.org/wiki/%22Hello,_world!%22_program
+**Output:** 700  
